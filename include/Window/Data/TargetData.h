@@ -20,12 +20,16 @@ namespace ling {
         //设备名称
         std::string name;
         //设备ID，由受控端随机生成
-        int id = -1;
+        //int id = -1;
 
     public:
-        TargetData();
+        TargetData(const std::string &name, const std::string &ip);
 
         ~TargetData();
+
+        [[nodiscard]] const std::string &getName() const;
+
+        [[nodiscard]] const std::string &getIP() const;
     };
 
 } // ling

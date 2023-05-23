@@ -24,15 +24,26 @@ namespace ling {
         //端口号
         static int port;
         //设备列表
-        static std::unordered_map<int, std::shared_ptr<ling::TargetData>> targetMap;
+        static std::unordered_map<std::string, std::shared_ptr<ling::TargetData>> targetMap;
         //搜索线程是否已经启动
         static bool isStartThread;
+
+        static std::atomic<bool> selectProcFlag;
+        /**
+         * 保证设备池读写分离
+         */
+        static std::atomic_flag targetMapLock;
 
     protected:
         /**
          * 启动设备监听线程
          */
         static void startThread();
+
+        /**
+         * 向局域网中推送控制端的IP地址和基本信息，受控端收到广播会推送基本信息
+         */
+        static void pushBroadcastAddress();
 
     public:
         TargetSelector();

@@ -13,14 +13,18 @@ bool MainWindow(int key);
  * 命令代码
  */
 
+
+struct SELECT_TARGET_DATA {
+    int version;    //协议版本
+    int proc;       //监听端口号
+};
+
 /**
- * struct {
- *      int version;    //协议版本
- *      char[32] ip;    //ip地址
- *      int proc;       //监听端口号
- * }
+ * 搜索设备响应数据包
  */
-#define SELECT_TARGET_CODE 1    //搜索设备，受控端收到此命令将会发送自己的基本信息到GUI
+struct PUSH_TARGET_DATA {
+    char name[128];     //设备名称
+};
 
 #include <unistd.h>
 #include <limits.h>
@@ -31,6 +35,8 @@ bool MainWindow(int key);
 
 #endif
 
-std::string GetExecutablePath();
+        std::string
+
+GetExecutablePath();
 
 #endif //GUIMEMORYPLUG_MAINGUI_H

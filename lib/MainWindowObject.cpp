@@ -18,7 +18,7 @@ namespace ling {
     MainWindowObject::~MainWindowObject() = default;
 
     bool MainWindowObject::DrawWindow(int key) {
-        ImGui::Begin("MemoryPlug GUI -- 首页",
+        ImGui::Begin("MemoryPlug GUI -- 主菜单",
                      nullptr, /*ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |*/
                      ImGuiWindowFlags_MenuBar);
 
