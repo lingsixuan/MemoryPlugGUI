@@ -1,3 +1,6 @@
+// Copyright (c) 2023 驻魂圣使
+// Licensed under the GPL-3.0 license
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>

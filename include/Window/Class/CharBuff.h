@@ -1,6 +1,5 @@
-//
-// Created by ling on 23-5-25.
-//
+// Copyright (c) 2023 驻魂圣使
+// Licensed under the GPL-3.0 license
 
 #ifndef MEMORYPLUGKERNEL_CHARBUFF_H
 #define MEMORYPLUGKERNEL_CHARBUFF_H

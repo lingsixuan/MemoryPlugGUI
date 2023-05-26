@@ -1,6 +1,5 @@
-//
-// Created by ling on 23-5-24.
-//
+// Copyright (c) 2023 驻魂圣使
+// Licensed under the GPL-3.0 license
 
 #include <thread>
 #include "Window/Class/TCP.h"

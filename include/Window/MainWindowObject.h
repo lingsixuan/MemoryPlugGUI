@@ -1,6 +1,5 @@
-//
-// Created by ling on 23-5-22.
-//
+// Copyright (c) 2023 驻魂圣使
+// Licensed under the GPL-3.0 license
 
 #ifndef GUIMEMORYPLUG_MAINWINDOWOBJECT_H
 #define GUIMEMORYPLUG_MAINWINDOWOBJECT_H

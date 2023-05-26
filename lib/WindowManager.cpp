@@ -1,7 +1,5 @@
-//
-// Created by ling on 23-5-22.
-//  窗口管理器
-//
+// Copyright (c) 2023 驻魂圣使
+// Licensed under the GPL-3.0 license
 
 
 #include <memory>
