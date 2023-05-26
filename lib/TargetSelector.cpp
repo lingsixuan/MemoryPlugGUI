@@ -20,9 +20,11 @@
 
 #include <csignal>
 #include <atomic>
+#include <random>
 
 #include "Window/TargetSelector.h"
 #include "Window/MainWindowObject.h"
+#include "Window/Class/TCP.h"
 
 namespace ling {
     int TargetSelector::TargetSelectorNumber = 0;
@@ -32,9 +34,18 @@ namespace ling {
     std::atomic<bool> TargetSelector::selectProcFlag(true);
     std::unordered_map<std::string, std::shared_ptr<ling::TargetData>> TargetSelector::targetMap;
     std::atomic_flag TargetSelector::targetMapLock;
+    float TargetSelector::noThreadTime = 0;
+    float TargetSelector::startThreadTime = 0;
+    float TargetSelector::pingTime;
 
     TargetSelector::TargetSelector() {
-
+        // 创建随机数引擎
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        // 创建随机数分布
+        std::uniform_int_distribution<int> distribution(5000, 60000);
+        // 生成随机数
+        port = distribution(gen);
     }
 
     TargetSelector::~TargetSelector() {
@@ -69,31 +80,75 @@ namespace ling {
             ImGui::EndMenuBar();
         }
 
+        if (ling::TargetSelector::pingTime <= 0) {
+            pingTime = 1;
+            for (auto it = targetMap.begin(); it != targetMap.end();) {
+                it->second->pushPing();
+                it++;
+            }
+        } else {
+            pingTime -= ImGui::GetIO().DeltaTime;
+        }
+
         ImGui::InputInt("监听端口", &port, 1, 0, isStartThread ? ImGuiInputTextFlags_ReadOnly : 0);
 
         if (port > 65535 || port < 1) {
             ImGui::TextColored(ImVec4(1, 0, 0, 1), "端口号%d超出范围：1-65535", port);
         }
-        if (ImGui::Button("扫描设备")) {
+
+        if (ImGui::Button("启动监听器")) {
             if (port < 65535 && port > 1) {
-                targetMap.clear();
                 startThread();
-                ling::TargetSelector::scanningTime = 5;
             }
+        }
+
+        if (startThreadTime > 0) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "监听器已经启动");
+            startThreadTime -= ImGui::GetIO().DeltaTime;
+        }
+
+        if (isStartThread && startThreadTime <= 0) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1, 1, 1, 1), "监听器工作中");
+            startThreadTime -= ImGui::GetIO().DeltaTime;
+        }
+
+        if (ImGui::Button("扫描设备")) {
+            if (!isStartThread) {
+                noThreadTime = 5;
+            } else {
+                targetMap.clear();
+                if (ling::TargetSelector::scanningTime > 0) {
+                    ling::MainWindowObject::addLog(DEBUG, "正在搜索，请稍候");
+                }
+                ling::TargetSelector::scanningTime = 5;
+                TargetSelector::pushBroadcastAddress();
+            }
+        }
+
+        if (noThreadTime > 0) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "请先启动监听器");
+            ling::TargetSelector::noThreadTime -= ImGui::GetIO().DeltaTime;
         }
 
         if (ling::TargetSelector::scanningTime > 0) {
             ImGui::SameLine();
-            ImGui::Text("正在扫描...");
+            ImGui::Text("正在扫描...请保持设备处于亮屏状态");
             ling::TargetSelector::scanningTime -= ImGui::GetIO().DeltaTime;
         }
         while (!targetMapLock.test_and_set(std::memory_order_release));
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "设备列表");
+        ImGui::BeginChild("Scrolling");
         for (auto it = targetMap.begin(); it != targetMap.end();) {
-            ImGui::Text("设备名称：%-15.15s IP：%s", it->second->getName().c_str(), it->second->getIP().c_str());
+            ImGui::Text("设备名称：%-15.15s IP：%s\tping：%-4.4d ms", it->second->getName().c_str(),
+                        it->second->getIP().c_str(), it->second->getPing());
             ImGui::SameLine();
             ImGui::Button("连接");
             it++;
         }
+        ImGui::EndChild();
         targetMapLock.clear(std::memory_order_release);
 
         ImGui::End();
@@ -106,60 +161,30 @@ namespace ling {
     }
 
     void TargetSelector::startThread() {
-        if (ling::TargetSelector::scanningTime > 0) {
-            ling::MainWindowObject::addLog(DEBUG, "正在搜索，请稍候");
-        }
-        TargetSelector::pushBroadcastAddress();
-
         if (!isStartThread) {
             isStartThread = true;
+            noThreadTime = 0;
             std::cout << "搜索线程启动" << std::endl;
-            std::thread thread1([]() -> void {
-                int sock = socket(AF_INET, SOCK_DGRAM, 0);
-                if (sock == -1) {
-                    std::cerr << "创建套接字失败" << std::endl;
-                    return;
-                }
-                // 绑定套接字到广播端口
-                sockaddr_in addr{};
-                addr.sin_family = AF_INET;
-                addr.sin_port = htons(port);
-                addr.sin_addr.s_addr = htonl(INADDR_ANY);
-                if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
-                    std::cerr << "绑定套接字失败" << std::endl;
-                    close(sock);
-                    return;
-                }
-                std::cout << "终端监听器就绪！" << std::endl;
-                while (selectProcFlag.load(std::memory_order_relaxed)) {
-                    // 接收广播消息
-                    PUSH_TARGET_DATA data{};
-                    sockaddr_in senderAddr{};
-                    socklen_t senderAddrLen = sizeof(senderAddr);
-                    ssize_t bytesRead = recvfrom(sock, &data, sizeof(data) - 1, 0, (struct sockaddr *) &senderAddr,
-                                                 &senderAddrLen);
-                    if (bytesRead == -1) {
-                        std::cerr << "接收广播消息失败" << std::endl;
-                        close(sock);
-                        return;
-                    }
-
-                    //std::cout << "协议版本：" << data.version << std::endl << "端口：" << data.proc << std::endl;
-                    std::cout << "终端地址: " << inet_ntoa(senderAddr.sin_addr) << std::endl;
-                    while (!targetMapLock.test_and_set(std::memory_order_release));
-                    targetMap[data.name] = std::make_shared<TargetData>(data.name, inet_ntoa(senderAddr.sin_addr));
-                    targetMapLock.clear(std::memory_order_release);
-                }
-                std::cout << "终端监听器关闭" << std::endl;
-                // 关闭套接字
-                close(sock);
+            std::thread thread1([=]() -> void {
+                TCP *tcp = TCP::getTCP();
+                tcp->addEventHandler(API_CODE_PUSH_TARGET_DATA,
+                                     [](int apiCode, SOCKET fd, const std::string &ip,
+                                        const std::shared_ptr<char> &ptr) {
+                                         if (apiCode == API_CODE_PUSH_TARGET_DATA) {
+                                             char *p = ptr.get();
+                                             if (targetMap.count(ip) == 0)
+                                                 targetMap[ip] = std::make_shared<TargetData>(p, ip, fd);
+                                         }
+                                     });
+                tcp->start(port);
             });
             thread1.detach();
+        } else {
+            startThreadTime = 5;
         }
     }
 
     void TargetSelector::pushBroadcastAddress() {
-
 #if WINDOWS_BUILD
         // 初始化Winsock库
         WSADATA wsaData;
@@ -209,7 +234,7 @@ namespace ling {
 
         // 发送广播消息
         //std::string message = "Hello, broadcast!";
-        SELECT_TARGET_DATA data;
+        SELECT_TARGET_DATA data{};
         data.proc = port;
         data.version = VERSION_CODE;
         if (sendto(sock, (const char *) &data, sizeof(data), 0, (struct sockaddr *) &addr, sizeof(addr)) == -1) {

@@ -21,6 +21,8 @@ add_executable(MemoryPlugGUI
         lib/SelectProcWindow.cpp
         lib/TargetSelector.cpp
         lib/TargetData.cpp
+        lib/TCP.cpp
+        lib/CharBuff.cpp
         )
 
 

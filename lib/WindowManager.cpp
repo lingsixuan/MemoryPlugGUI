@@ -5,6 +5,7 @@
 
 
 #include <memory>
+#include <fstream>
 #include "GUI/WindowManager.h"
 #include "Window/WindowDataObject.h"
 #include "GUI/MainGUI.h"
@@ -14,6 +15,8 @@ int WindowIndex = 0;
 
 // GLFW 窗口
 GLFWwindow *g_Window = nullptr;
+
+ImFont *font;
 
 //窗口读写自旋锁
 std::atomic_flag WindowsReadWriteLock;
@@ -53,8 +56,8 @@ void WindowInit(std::shared_ptr<ling::WindowDataObject> mainWindow) {
     delete[] pathChar;
 
     ImGuiIO &io = ImGui::GetIO();
-    ImFont *font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 20.0f, nullptr,
-                                                io.Fonts->GetGlyphRangesChineseFull());
+    font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 20.0f, nullptr,
+                                        io.Fonts->GetGlyphRangesChineseFull());
     // 初始化 GLFW
     if (!glfwInit()) {
         return;
@@ -65,7 +68,7 @@ void WindowInit(std::shared_ptr<ling::WindowDataObject> mainWindow) {
     // 获取屏幕的分辨率
     const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     // 创建窗口
-    g_Window = glfwCreateWindow(mode->width, mode->height, "ImGUI测试", nullptr, nullptr);
+    g_Window = glfwCreateWindow(mode->width, mode->height, "MemoryPlugGUI", nullptr, nullptr);
     if (!g_Window) {
         glfwTerminate();
         return;
@@ -90,6 +93,8 @@ void WindowInit(std::shared_ptr<ling::WindowDataObject> mainWindow) {
         std::terminate();
     }
     WindowList[WindowIndex++] = mainWindow;
+
+
     // 主循环
     while (!glfwWindowShouldClose(g_Window)) {
         glfwPollEvents();
@@ -100,7 +105,8 @@ void WindowInit(std::shared_ptr<ling::WindowDataObject> mainWindow) {
         ImGui::NewFrame();
 
         glClear(GL_COLOR_BUFFER_BIT);
-
+        ImGui::GetBackgroundDrawList()->AddText(font, 25, ImVec2(mode->width - 200, mode->height - 100), 0xffffffff,
+                                                "MemoryPlugGUI");
         // 绘制 ImGui 窗口
         //DrawImGuiWindow();
         while (!WindowsReadWriteLock.test_and_set(std::memory_order_release));

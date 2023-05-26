@@ -21,12 +21,18 @@ namespace ling {
         static int TargetSelectorNumber;
         //搜索设备时间
         static float scanningTime;
+        //没有启动搜索线程就开始搜索设备时的提示
+        static float noThreadTime;
+        //已经启动搜索线程时的提示
+        static float startThreadTime;
         //端口号
         static int port;
         //设备列表
         static std::unordered_map<std::string, std::shared_ptr<ling::TargetData>> targetMap;
         //搜索线程是否已经启动
         static bool isStartThread;
+        //距离下一次发送ping请求还有多少时间
+        static float pingTime;
 
         static std::atomic<bool> selectProcFlag;
         /**

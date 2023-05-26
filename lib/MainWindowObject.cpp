@@ -4,9 +4,11 @@
 
 #include <iostream>
 #include <cmath>
+#include <csignal>
 #include "Window/MainWindowObject.h"
 #include "Window/SelectProcWindow.h"
 #include "Window/TargetSelector.h"
+#include "Window/Class/TCP.h"
 
 namespace ling {
 
@@ -32,6 +34,7 @@ namespace ling {
 
                 }
                 if (ImGui::MenuItem("关闭", "")) {
+                    delete ling::TCP::getTCP();
                     exit(0);
                     //mainWindowFlag.store(false, std::memory_order_release);
                     return true;
